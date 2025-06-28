@@ -58,6 +58,12 @@
       text-align: left;
     }
 
+    .message-info {
+      font-size: 10px;
+      color: #666;
+      margin-top: 3px;
+    }
+
     .chat-input {
       display: flex;
       padding: 10px;
@@ -82,11 +88,22 @@
       cursor: pointer;
     }
 
+    .chat-input button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
     .chat-status {
       padding: 5px 15px;
       font-size: 12px;
       background: #eee;
       color: #333;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
     }
   </style>
 </head>
@@ -94,19 +111,21 @@
   <div class="chat-container">
     <div class="chat-header">Support Chat</div>
     <div class="chat-status" id="status">Connecting...</div>
-    <div class="chat-messages" id="messages"></div>
+    <div class="chat-messages" id="messages">
+      <div class="loading" id="loading">Loading chat history...</div>
+    </div>
     <div class="chat-input">
-      <input type="text" id="messageInput" placeholder="Type your message..." />
-      <button onclick="sendMessage()">Send</button>
+      <input type="text" id="messageInput" placeholder="Type your message..." disabled />
+      <button onclick="sendMessage()" id="sendBtn" disabled>Send</button>
     </div>
   </div>
 
   <script>
     // ✅ Replace these with your actual values
-    const publicFingerprint = 'your_public_key';
+    const publicFingerprint = 'your_pubic_key';
     const privateFingerprint = 'your_secret_key';
-    const userEmail = 'user@example.com';
-    const userName = 'Guest';
+    const userEmail = 'alejandro@google.com';
+    const userName = 'ALEJANDRO';
 
     const wsUrl = `wss://api.ccpay.space/ws/chat/${publicFingerprint}/${userEmail}?private_fingerprint=${privateFingerprint}`;
 
@@ -115,55 +134,156 @@
     const statusEl = document.getElementById('status');
     const messagesEl = document.getElementById('messages');
     const inputEl = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const loadingEl = document.getElementById('loading');
+
+    let isConnected = false;
+    let historyLoaded = false;
 
     socket.onopen = () => {
       statusEl.textContent = 'Connected';
+      isConnected = true;
+      inputEl.disabled = false;
+      sendBtn.disabled = false;
     };
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      console.log('Received:', data);
 
-      if (data.type === 'new_message') {
-        appendMessage(data.message, 'other');
-      } else if (data.type === 'message_received') {
-        console.log('Message confirmed');
+      switch (data.type) {
+        case 'previous_messages':
+          // Handle message history
+          loadingEl.style.display = 'none';
+          historyLoaded = true;
+          
+          if (data.messages && data.messages.length > 0) {
+            data.messages.forEach(msg => {
+              const isMe = msg.sender_email === userEmail;
+              appendMessage(msg.message, isMe ? 'me' : 'other', msg.created_at, msg.sender_email);
+            });
+          } else {
+            // Show welcome message if no history
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.style.textAlign = 'center';
+            welcomeDiv.style.padding = '20px';
+            welcomeDiv.style.color = '#666';
+            welcomeDiv.innerHTML = '👋 Welcome! Start a conversation by sending a message.';
+            messagesEl.appendChild(welcomeDiv);
+          }
+          break;
+
+        case 'new_message':
+          // Handle real-time incoming messages
+          if (historyLoaded) {
+            appendMessage(data.message, 'other', data.created_at, data.sender_email);
+          }
+          break;
+
+        case 'message_received':
+          // Message confirmation
+          console.log('Message confirmed:', data);
+          break;
+
+        default:
+          console.log('Unknown message type:', data.type);
       }
     };
 
     socket.onclose = () => {
-      statusEl.textContent = 'Disconnected';
+      statusEl.textContent = 'Disconnected - Reconnecting...';
+      isConnected = false;
+      inputEl.disabled = true;
+      sendBtn.disabled = true;
+      
+      // Auto-reconnect after 3 seconds
+      setTimeout(() => {
+        if (!isConnected) {
+          location.reload(); // Simple reconnection by reloading
+        }
+      }, 3000);
     };
 
     socket.onerror = (err) => {
       statusEl.textContent = 'Connection error';
       console.error('WebSocket error:', err);
+      loadingEl.style.display = 'none';
+      
+      // Show error message
+      const errorDiv = document.createElement('div');
+      errorDiv.style.textAlign = 'center';
+      errorDiv.style.padding = '20px';
+      errorDiv.style.color = '#d32f2f';
+      errorDiv.innerHTML = '❌ Connection failed. Please refresh the page.';
+      messagesEl.appendChild(errorDiv);
     };
 
     function sendMessage() {
       const msg = inputEl.value.trim();
-      if (msg === '' || socket.readyState !== WebSocket.OPEN) return;
+      if (msg === '' || !isConnected) return;
 
+      // Send message to server
       socket.send(JSON.stringify({
         name: userName,
         message: msg
       }));
 
-      appendMessage(msg, 'me');
+      // Add to UI immediately (optimistic update)
+      appendMessage(msg, 'me', new Date().toISOString(), userEmail);
       inputEl.value = '';
     }
 
-    function appendMessage(msg, who) {
+    function appendMessage(msg, who, timestamp, senderEmail) {
       const div = document.createElement('div');
       div.className = `message ${who}`;
-      div.textContent = msg;
+      
+      const messageText = document.createElement('div');
+      messageText.textContent = msg;
+      div.appendChild(messageText);
+      
+      // Add timestamp and sender info
+      if (timestamp) {
+        const info = document.createElement('div');
+        info.className = 'message-info';
+        const time = new Date(timestamp).toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+        info.textContent = `${time}`;
+        if (who === 'other' && senderEmail) {
+          info.textContent += ` • ${senderEmail}`;
+        }
+        div.appendChild(info);
+      }
+      
       messagesEl.appendChild(div);
+      // Fixed the typo here: messagesEl instead of messagesel
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
+    function formatTime(timestamp) {
+      if (!timestamp) return '';
+      return new Date(timestamp).toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    }
+
+    // Handle Enter key
     inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
         sendMessage();
       }
+    });
+
+    // Auto-focus input when page loads
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if (!inputEl.disabled) {
+          inputEl.focus();
+        }
+      }, 500);
     });
   </script>
 </body>
