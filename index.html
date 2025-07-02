@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -122,12 +122,13 @@
 
   <script>
     // ✅ Replace these with your actual values
-    const publicFingerprint = 'your_pubic_key';
-    const privateFingerprint = 'your_secret_key';
+    const publicFingerprint = '1816267aa98c33d2451a910092d742e0c9ef8ab2c4ba3f8607dbc882bb38bf02';
+    const privateFingerprint = '6147ec38e77fcc9525e81792b3829df8b943902f8e912123baea134126a7476d';
     const userEmail = 'alejandro@google.com';
     const userName = 'ALEJANDRO';
 
-    const wsUrl = `wss://api.ccpay.space/ws/chat/${publicFingerprint}/${userEmail}?private_fingerprint=${privateFingerprint}`;
+    const wsUrl = `ws://localhost:8000/ws/chat/${publicFingerprint}/${userEmail}?private_fingerprint=${privateFingerprint}`;
+    // const wsUrl = `wss://api.ccpay.space/ws/chat/${publicFingerprint}/${userEmail}?private_fingerprint=${privateFingerprint}`;
 
     const socket = new WebSocket(wsUrl);
 
@@ -267,6 +268,531 @@
         hour: '2-digit', 
         minute: '2-digit' 
       });
+    }
+
+    // Handle Enter key
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Auto-focus input when page loads
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if (!inputEl.disabled) {
+          inputEl.focus();
+        }
+      }, 500);
+    });
+  </script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Support Chat</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .chat-container {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .chat-header {
+      padding: 15px;
+      background: #4CAF50;
+      color: white;
+      font-size: 18px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+    }
+
+    .message {
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      border-radius: 16px;
+      max-width: 75%;
+      word-wrap: break-word;
+      display: inline-block;
+      clear: both;
+    }
+
+    .me {
+      background-color: #dcf8c6;
+      float: right;
+      text-align: right;
+    }
+
+    .other {
+      background-color: #f1f0f0;
+      float: left;
+      text-align: left;
+    }
+
+    .message-info {
+      font-size: 10px;
+      color: #666;
+      margin-top: 3px;
+    }
+
+    .attachment {
+      margin-top: 8px;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+      border-left: 3px solid #4CAF50;
+    }
+
+    .attachment-icon {
+      display: inline-block;
+      margin-right: 8px;
+      font-size: 16px;
+    }
+
+    .attachment-info {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .attachment-link {
+      color: #4CAF50;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .attachment-link:hover {
+      text-decoration: underline;
+    }
+
+    .chat-input {
+      padding: 10px;
+      border-top: 1px solid #ddd;
+    }
+
+    .input-row {
+      display: flex;
+      margin-bottom: 10px;
+    }
+
+    .input-row input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 16px;
+      outline: none;
+    }
+
+    .input-row button {
+      padding: 10px 20px;
+      margin-left: 10px;
+      background: #4CAF50;
+      border: none;
+      color: white;
+      border-radius: 16px;
+      cursor: pointer;
+    }
+
+    .input-row button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .file-input-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+    }
+
+    .file-input-wrapper input[type="file"] {
+      position: absolute;
+      left: -9999px;
+    }
+
+    .file-input-button {
+      display: inline-block;
+      padding: 8px 16px;
+      background: #2196F3;
+      color: white;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .file-input-button:hover {
+      background: #1976D2;
+    }
+
+    .file-preview {
+      font-size: 12px;
+      color: #666;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-remove {
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chat-status {
+      padding: 5px 15px;
+      font-size: 12px;
+      background: #eee;
+      color: #333;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+
+    .error {
+      background: #ffe6e6;
+      color: #d32f2f;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .file-size-limit {
+      font-size: 11px;
+      color: #999;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">Support Chat</div>
+    <div class="chat-status" id="status">Connecting...</div>
+    <div class="chat-messages" id="messages">
+      <div class="loading" id="loading">Loading chat history...</div>
+    </div>
+    <div class="chat-input">
+      <div class="input-row">
+        <input type="text" id="messageInput" placeholder="Type your message..." disabled />
+        <button onclick="sendMessage()" id="sendBtn" disabled>Send</button>
+      </div>
+      <div class="file-input-container">
+        <div class="file-input-wrapper">
+          <input type="file" id="fileInput" onchange="handleFileSelect()" disabled />
+          <label for="fileInput" class="file-input-button" id="fileBtn">📎 Attach File</label>
+        </div>
+        <div class="file-preview" id="filePreview"></div>
+        <button class="file-remove" id="fileRemove" onclick="removeFile()" style="display: none;">×</button>
+      </div>
+      <div class="file-size-limit">Maximum file size: 10 MB</div>
+    </div>
+  </div>
+
+  <script>
+    // ✅ Replace these with your actual values
+    const publicFingerprint = 'your_public_key';
+    const privateFingerprint = 'your_private_key';
+    const userEmail = 'alejandro@google.com';
+    const userName = 'ALEJANDRO';
+
+    // const wsUrl = `ws://localhost:8000/ws/chat/${publicFingerprint}/${userEmail}?private_fingerprint=${privateFingerprint}`;
+    const wsUrl = `wss://api.ccpay.space/ws/chat/${publicFingerprint}/${userEmail}?private_fingerprint=${privateFingerprint}`;
+
+    const socket = new WebSocket(wsUrl);
+
+    const statusEl = document.getElementById('status');
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const loadingEl = document.getElementById('loading');
+    const fileInput = document.getElementById('fileInput');
+    const fileBtn = document.getElementById('fileBtn');
+    const filePreview = document.getElementById('filePreview');
+    const fileRemove = document.getElementById('fileRemove');
+
+    let isConnected = false;
+    let historyLoaded = false;
+    let selectedFile = null;
+
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+    socket.onopen = () => {
+      statusEl.textContent = 'Connected';
+      isConnected = true;
+      inputEl.disabled = false;
+      sendBtn.disabled = false;
+      fileInput.disabled = false;
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log('Received:', data);
+
+      switch (data.type) {
+        case 'previous_messages':
+          // Hide loading and mark history as loaded
+          loadingEl.style.display = 'none';
+          historyLoaded = true;
+          
+          if (data.messages && data.messages.length > 0) {
+            data.messages.forEach(msg => {
+              const isMe = msg.sender_email === userEmail;
+              appendMessage(msg.message, isMe ? 'me' : 'other', msg.created_at, msg.sender_email, msg.attachment);
+            });
+          } else {
+            // Show welcome message if no history
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.style.textAlign = 'center';
+            welcomeDiv.style.padding = '20px';
+            welcomeDiv.style.color = '#666';
+            welcomeDiv.innerHTML = '👋 Welcome! Start a conversation by sending a message.';
+            messagesEl.appendChild(welcomeDiv);
+          }
+          break;
+
+        case 'new_message':
+          // Handle real-time incoming messages - FIXED: Always show new messages regardless of historyLoaded
+          appendMessage(data.message, 'other', data.created_at, data.sender_email, data.attachment);
+          break;
+
+        case 'message_received':
+          // Message confirmation
+          console.log('Message confirmed:', data);
+          break;
+
+        case 'error':
+          // Handle errors
+          showError(data.message);
+          break;
+
+        default:
+          console.log('Unknown message type:', data.type);
+      }
+    };
+
+    socket.onclose = () => {
+      statusEl.textContent = 'Disconnected - Reconnecting...';
+      isConnected = false;
+      inputEl.disabled = true;
+      sendBtn.disabled = true;
+      fileInput.disabled = true;
+      
+      // Auto-reconnect after 3 seconds
+      setTimeout(() => {
+        if (!isConnected) {
+          location.reload(); // Simple reconnection by reloading
+        }
+      }, 3000);
+    };
+
+    socket.onerror = (err) => {
+      statusEl.textContent = 'Connection error';
+      console.error('WebSocket error:', err);
+      loadingEl.style.display = 'none';
+      
+      // Show error message
+      const errorDiv = document.createElement('div');
+      errorDiv.style.textAlign = 'center';
+      errorDiv.style.padding = '20px';
+      errorDiv.style.color = '#d32f2f';
+      errorDiv.innerHTML = '❌ Connection failed. Please refresh the page.';
+      messagesEl.appendChild(errorDiv);
+    };
+
+    function sendMessage() {
+      const msg = inputEl.value.trim();
+      if ((msg === '' && !selectedFile) || !isConnected) return;
+
+      const messageData = {
+        name: userName,
+        message: msg || (selectedFile ? `Shared file: ${selectedFile.name}` : '')
+      };
+
+      // Add file data if file is selected
+      if (selectedFile) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const base64Data = e.target.result.split(',')[1]; // Remove data:type;base64, prefix
+          messageData.file_data = base64Data;
+          messageData.filename = selectedFile.name;
+          messageData.file_type = selectedFile.type;
+          
+          // Send message with file
+          socket.send(JSON.stringify(messageData));
+          
+          // Add to UI immediately (optimistic update)
+          const attachment = {
+            filename: selectedFile.name,
+            file_type: selectedFile.type,
+            file_size: selectedFile.size,
+            file_url: e.target.result // Use data URL for preview
+          };
+          appendMessage(messageData.message, 'me', new Date().toISOString(), userEmail, attachment);
+          
+          // Clear input and file
+          inputEl.value = '';
+          removeFile();
+        };
+        reader.readAsDataURL(selectedFile);
+      } else {
+        // Send text-only message
+        socket.send(JSON.stringify(messageData));
+        
+        // Add to UI immediately (optimistic update)
+        appendMessage(msg, 'me', new Date().toISOString(), userEmail);
+        inputEl.value = '';
+      }
+    }
+
+    function appendMessage(msg, who, timestamp, senderEmail, attachment = null) {
+      const div = document.createElement('div');
+      div.className = `message ${who}`;
+      
+      // Add message text if it exists
+      if (msg && msg.trim()) {
+        const messageText = document.createElement('div');
+        messageText.textContent = msg;
+        div.appendChild(messageText);
+      }
+      
+      // Add attachment if it exists
+      if (attachment) {
+        const attachmentDiv = createAttachmentElement(attachment);
+        div.appendChild(attachmentDiv);
+      }
+      
+      // Add timestamp and sender info
+      if (timestamp) {
+        const info = document.createElement('div');
+        info.className = 'message-info';
+        const time = new Date(timestamp).toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+        info.textContent = `${time}`;
+        if (who === 'other' && senderEmail) {
+          info.textContent += ` • ${senderEmail}`;
+        }
+        div.appendChild(info);
+      }
+      
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function createAttachmentElement(attachment) {
+      const attachmentDiv = document.createElement('div');
+      attachmentDiv.className = 'attachment';
+      
+      const icon = getFileIcon(attachment.file_type);
+      const sizeText = formatFileSize(attachment.file_size);
+      
+      attachmentDiv.innerHTML = `
+        <div>
+          <span class="attachment-icon">${icon}</span>
+          <a href="${attachment.file_url}" target="_blank" class="attachment-link">
+            ${attachment.filename}
+          </a>
+        </div>
+        <div class="attachment-info">${sizeText}</div>
+      `;
+      
+      return attachmentDiv;
+    }
+
+    function getFileIcon(fileType) {
+      if (fileType.startsWith('image/')) return '🖼️';
+      if (fileType.startsWith('video/')) return '🎥';
+      if (fileType.startsWith('audio/')) return '🎵';
+      if (fileType.includes('pdf')) return '📄';
+      if (fileType.includes('word') || fileType.includes('document')) return '📝';
+      if (fileType.includes('excel') || fileType.includes('spreadsheet')) return '📊';
+      if (fileType.includes('powerpoint') || fileType.includes('presentation')) return '📋';
+      if (fileType.includes('zip') || fileType.includes('rar')) return '🗜️';
+      return '📎';
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function handleFileSelect() {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      if (file.size > MAX_FILE_SIZE) {
+        showError(`File size (${formatFileSize(file.size)}) exceeds maximum allowed size (10 MB)`);
+        fileInput.value = '';
+        return;
+      }
+
+      selectedFile = file;
+      filePreview.textContent = `${file.name} (${formatFileSize(file.size)})`;
+      fileRemove.style.display = 'block';
+    }
+
+    function removeFile() {
+      selectedFile = null;
+      fileInput.value = '';
+      filePreview.textContent = '';
+      fileRemove.style.display = 'none';
+    }
+
+    function showError(message) {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error';
+      errorDiv.textContent = message;
+      messagesEl.appendChild(errorDiv);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      
+      // Auto-remove error after 5 seconds
+      setTimeout(() => {
+        if (errorDiv.parentNode) {
+          errorDiv.parentNode.removeChild(errorDiv);
+        }
+      }, 5000);
     }
 
     // Handle Enter key
